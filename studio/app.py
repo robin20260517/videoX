@@ -119,7 +119,7 @@ def create_app(data_dir=None, builtin_dir=None):
 
     @app.get('/api/media/{aid}')
     def media(aid: str):
-        return FileResponse(store.get_asset(aid)['path'])
+        return FileResponse(store.get_asset(aid)['path'], media_type='image/webp')
 
     @app.post('/api/scenes/search')
     def scene_search(query: SceneSearch):

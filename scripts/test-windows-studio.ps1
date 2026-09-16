@@ -5,9 +5,11 @@ $unpack = Join-Path $env:RUNNER_TEMP 'videox-windows-smoke'
 $studioRoot = Join-Path $unpack 'videoX'
 
 if (-not (Test-Path $archive)) { throw "缺少 Windows 压缩包：$archive" }
+Write-Host '正在解压 Windows 安装包……'
 Expand-Archive -Path $archive -DestinationPath $unpack -Force
 $launcher = Join-Path $studioRoot '一键启动.cmd'
 if (-not (Test-Path $launcher)) { throw '压缩包内缺少中文一键启动入口。' }
+Write-Host '解压完成，正在模拟首次双击中文入口……'
 
 $launchLog = Join-Path $env:RUNNER_TEMP 'videox-launch.out.log'
 $errorLog = Join-Path $env:RUNNER_TEMP 'videox-launch.err.log'
@@ -15,15 +17,19 @@ $runner = $null
 try {
     $runner = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d', '/c', "`"$launcher`"" -WorkingDirectory $studioRoot -WindowStyle Hidden -RedirectStandardOutput $launchLog -RedirectStandardError $errorLog -PassThru
     $ready = $false
-    for ($attempt = 0; $attempt -lt 180; $attempt++) {
+    for ($attempt = 0; $attempt -lt 90; $attempt++) {
         try {
             $health = Invoke-RestMethod 'http://127.0.0.1:8787/api/health' -TimeoutSec 2
             if ($health.ok -eq $true) { $ready = $true; break }
         } catch { }
         if ($runner.HasExited) { break }
+        if ($attempt -gt 0 -and $attempt % 15 -eq 0) {
+            Write-Host "仍在等待首次启动：$($attempt * 2) 秒。"
+        }
         Start-Sleep -Seconds 2
     }
-    if (-not $ready) { throw '双击启动入口后，本地网页未在六分钟内启动。' }
+    if (-not $ready) { throw '双击启动入口后，本地网页未在三分钟内启动。' }
+    Write-Host '首次双击已启动本地服务，正在检查网页和内置素材……'
 
     $page = Invoke-WebRequest 'http://127.0.0.1:8787/' -UseBasicParsing -TimeoutSec 10
     if ($page.StatusCode -ne 200 -or $page.Content -notmatch '<html') {
@@ -39,7 +45,15 @@ try {
         throw '合成内置人物或场景未随压缩包加载。'
     }
 
-    $second = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d', '/c', "`"$launcher`"" -WorkingDirectory $studioRoot -WindowStyle Hidden -Wait -PassThru
+    Write-Host '正在模拟重复双击……'
+    $second = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d', '/c', "`"$launcher`"" -WorkingDirectory $studioRoot -WindowStyle Hidden -PassThru
+    for ($attempt = 0; $attempt -lt 15 -and -not $second.HasExited; $attempt++) {
+        Start-Sleep -Seconds 1
+    }
+    if (-not $second.HasExited) {
+        Stop-Process -Id $second.Id -Force -ErrorAction SilentlyContinue
+        throw '重复双击后启动器未在 15 秒内退出。'
+    }
     if ($second.ExitCode -ne 0) { throw '重复双击未能打开已经运行的工作室。' }
     Write-Host 'Windows 云端验证通过：解压 → 双击中文入口 → 网页与素材接口 → 重复双击。'
 } catch {
