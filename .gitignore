@@ -101,3 +101,11 @@ venv/
 # Workspace-local third-party runtimes (for example the portable Blender LTS
 # used by blender_world). These are checksum-verified but never committed.
 .runtime/
+
+# Local studio credentials are in OS keyring; all user media/jobs stay local.
+.studio/
+studio-web/node_modules/
+studio-web/dist/
+studio-web/*.tsbuildinfo
+studio-web/test-results/
+studio-web/playwright-report/

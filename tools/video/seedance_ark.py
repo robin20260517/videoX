@@ -707,7 +707,20 @@ class SeedanceArkVideo(BaseTool):
             )
         except Exception as exc:
             error_data: dict[str, Any] = {}
-            if task_id:
+            response = getattr(exc, "response", None)
+            status_code = getattr(response, "status_code", None)
+            definitive_rejection = (
+                task_id is None
+                and isinstance(status_code, int)
+                and 400 <= status_code < 500
+                and status_code not in {408, 409, 425, 429}
+            )
+            if definitive_rejection:
+                error_data = {
+                    "status": "rejected",
+                    "http_status": status_code,
+                }
+            elif task_id:
                 error_data = {
                     "task_id": task_id,
                     "status": "submitted_result_unknown",
@@ -943,6 +956,10 @@ class SeedanceArkVideo(BaseTool):
                 inputs.get("return_last_frame", False)
             ),
         }
+        if operation == "reference_to_video":
+            # Current Ark docs expose an explicit full-modal reference task
+            # hint. Avoid relying on `auto` when all media have reference roles.
+            payload["omni_reference_task_type"] = "reference"
         optional = (
             "callback_url",
             "execution_expires_after",
@@ -1317,7 +1334,10 @@ class SeedanceArkVideo(BaseTool):
             f"{self._get_base_url()}/contents/generations/tasks",
             headers=self._headers(api_key),
             json=payload,
-            timeout=30,
+            # Multimodal jobs may carry several Base64 images. Allow the
+            # provider enough time to receive and acknowledge the body; the
+            # create call is intentionally never retried automatically.
+            timeout=120,
         )
         self._raise_for_status(response)
         data = response.json()

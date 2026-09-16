@@ -92,6 +92,7 @@ class TestTaskActions:
             "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks"
         )
         assert captured["headers"]["Authorization"] == "Bearer fake-ark-key"
+        assert captured["timeout"] == 120
         assert captured["json"] == {
             "model": "doubao-seedance-2-0-260128",
             "content": [{"type": "text", "text": "A paper bird takes flight"}],
@@ -283,6 +284,7 @@ class TestInputSafety:
                 "role": "reference_audio",
             },
         ]
+        assert captured["payload"]["omni_reference_task_type"] == "reference"
 
     @pytest.mark.parametrize(
         "inputs, message",

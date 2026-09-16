@@ -1,0 +1,29 @@
+name: brazil-ugc-game-ad
+version: "1.0"
+description: One reference character, one scene, optional exact game-screen reference; one 15-second pt-BR UGC take.
+category: generated
+stability: beta
+default_checkpoint_policy: guided
+stages:
+  - name: ugc_script
+    skill: skills/pipelines/brazil-ugc-game-ad/script-director.md
+    produces: [ugc_draft]
+    tools_available: []
+    human_approval_default: true
+    checkpoint_required: true
+    success_criteria:
+      - One 15-second take; dynamic scene-specific sound, background motion, performance and camera.
+      - One character image, one scene image, optional game image; no extra people or invented screen.
+      - Natural pt-BR dialogue fitting the single continuous action.
+  - name: ugc_generate
+    skill: skills/pipelines/brazil-ugc-game-ad/assets-director.md
+    required_artifacts_in: [ugc_draft]
+    produces: [generation_packet]
+    tools_available: []
+    required_tools: []
+    human_approval_default: false
+    checkpoint_required: true
+    success_criteria:
+      - Submit WaveSpeed Seedance 2.0 Mini once at 480p only after script approval and local provider preflight.
+      - Persist remote task id immediately and query without paid resubmission.
+      - Download completed original single take to local renders/final.mp4.
