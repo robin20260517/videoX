@@ -15,16 +15,20 @@ $launchLog = Join-Path $env:RUNNER_TEMP 'videox-launch.out.log'
 $errorLog = Join-Path $env:RUNNER_TEMP 'videox-launch.err.log'
 $runner = $null
 try {
+    $env:STUDIO_NO_PAUSE = '1'
     $runner = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d', '/c', "`"$launcher`"" -WorkingDirectory $studioRoot -WindowStyle Hidden -RedirectStandardOutput $launchLog -RedirectStandardError $errorLog -PassThru
     $ready = $false
-    for ($attempt = 0; $attempt -lt 90; $attempt++) {
+    $deadline = [DateTime]::UtcNow.AddMinutes(3)
+    $nextProgress = [DateTime]::UtcNow.AddSeconds(30)
+    while ([DateTime]::UtcNow -lt $deadline) {
         try {
             $health = Invoke-RestMethod 'http://127.0.0.1:8787/api/health' -TimeoutSec 2
             if ($health.ok -eq $true) { $ready = $true; break }
         } catch { }
         if ($runner.HasExited) { break }
-        if ($attempt -gt 0 -and $attempt % 15 -eq 0) {
-            Write-Host "仍在等待首次启动：$($attempt * 2) 秒。"
+        if ([DateTime]::UtcNow -ge $nextProgress) {
+            Write-Host '仍在等待首次启动，正在准备本地运行环境……'
+            $nextProgress = [DateTime]::UtcNow.AddSeconds(30)
         }
         Start-Sleep -Seconds 2
     }

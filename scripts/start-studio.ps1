@@ -54,7 +54,11 @@ try {
 
     $studioPython = Join-Path $projectRoot '.venv\Scripts\python.exe'
     if (-not (Test-Path $studioPython)) { throw '未能找到工作室运行环境，请重新双击启动。' }
-    $requirementsHash = (Get-FileHash 'requirements-studio.txt' -Algorithm SHA256).Hash
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $requirementsBytes = [System.IO.File]::ReadAllBytes((Join-Path $projectRoot 'requirements-studio.txt'))
+        $requirementsHash = [BitConverter]::ToString($sha256.ComputeHash($requirementsBytes)).Replace('-', '')
+    } finally { $sha256.Dispose() }
     $stampPath = Join-Path $projectRoot '.venv\studio-dependencies.sha256'
     $savedHash = if (Test-Path $stampPath) { (Get-Content $stampPath -Raw).Trim() } else { '' }
     if ($savedHash -ne $requirementsHash) {
