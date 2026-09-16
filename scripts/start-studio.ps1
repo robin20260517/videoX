@@ -9,8 +9,11 @@ try {
     try {
         $health = Invoke-RestMethod -Uri 'http://127.0.0.1:8787/api/health' -TimeoutSec 2
         if ($health.ok -eq $true) {
-            Write-Host '工作室已经运行，正在打开网页……'
-            Start-Process 'http://127.0.0.1:8787'
+            Write-Host '工作室已经运行。'
+            if ($env:STUDIO_NO_BROWSER -ne '1') {
+                Write-Host '正在打开网页……'
+                Start-Process 'http://127.0.0.1:8787'
+            }
             exit 0
         }
     } catch { }
@@ -89,7 +92,11 @@ try {
 
     Write-Host '启动成功后将自动打开浏览器：http://127.0.0.1:8787' -ForegroundColor Green
     Write-Host '使用期间请保持此窗口打开；关闭网页不会中断后台任务。'
-    & $studioPython -m studio --open
+    if ($env:STUDIO_NO_BROWSER -eq '1') {
+        & $studioPython -m studio
+    } else {
+        & $studioPython -m studio --open
+    }
     if ($LASTEXITCODE -ne 0) { throw '工作室意外停止，请检查上方错误信息。' }
 } catch {
     Write-Host "启动失败：$($_.Exception.Message)" -ForegroundColor Red

@@ -16,6 +16,7 @@ $errorLog = Join-Path $env:RUNNER_TEMP 'videox-launch.err.log'
 $runner = $null
 try {
     $env:STUDIO_NO_PAUSE = '1'
+    $env:STUDIO_NO_BROWSER = '1'
     $runner = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d', '/c', "`"$launcher`"" -WorkingDirectory $studioRoot -WindowStyle Hidden -RedirectStandardOutput $launchLog -RedirectStandardError $errorLog -PassThru
     $ready = $false
     $deadline = [DateTime]::UtcNow.AddMinutes(3)
